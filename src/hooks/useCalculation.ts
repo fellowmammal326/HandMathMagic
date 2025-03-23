@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export function useCalculation() {
   const [numbers, setNumbers] = useState<number[]>([]);
@@ -16,32 +16,37 @@ export function useCalculation() {
     }
   }, []);
 
-  const calculate = useCallback(() => {
-    if (numbers.length < 2 || !operator) return;
+  // Automatically calculate when we have both numbers and an operator
+  useEffect(() => {
+    if (numbers.length === 2 && operator) {
+      const [a, b] = numbers;
+      let calculatedResult: number;
 
-    const [a, b] = numbers;
-    let calculatedResult: number;
+      switch (operator) {
+        case '+':
+          calculatedResult = a + b;
+          break;
+        case '-':
+          calculatedResult = a - b;
+          break;
+        case '*':
+          calculatedResult = a * b;
+          break;
+        case '/':
+          calculatedResult = b !== 0 ? a / b : 0;
+          break;
+        default:
+          return;
+      }
 
-    switch (operator) {
-      case '+':
-        calculatedResult = a + b;
-        break;
-      case '-':
-        calculatedResult = a - b;
-        break;
-      case '*':
-        calculatedResult = a * b;
-        break;
-      case '/':
-        calculatedResult = b !== 0 ? a / b : 0;
-        break;
-      default:
-        return;
+      setResult(calculatedResult);
+      
+      // Reset after a short delay to allow for the result to be seen
+      setTimeout(() => {
+        setNumbers([]);
+        setOperator('');
+      }, 2000);
     }
-
-    setResult(calculatedResult);
-    setNumbers([]);
-    setOperator('');
   }, [numbers, operator]);
 
   const clear = useCallback(() => {
@@ -51,13 +56,18 @@ export function useCalculation() {
   }, []);
 
   const getExpression = useCallback(() => {
-    const numStr = numbers.join(' ');
-    return `${numStr} ${operator}`;
-  }, [numbers, operator]);
+    if (result !== null) {
+      return `${numbers[0]} ${operator} ${numbers[1]} = ${result}`;
+    }
+    return numbers.length === 0 
+      ? 'Show a number gesture...'
+      : numbers.length === 1 
+        ? `${numbers[0]} ${operator ? operator + ' Show another number...' : 'Show an operator...'}`
+        : `${numbers.join(' ')} ${operator}`;
+  }, [numbers, operator, result]);
 
   return {
     handleGesture,
-    calculate,
     clear,
     getExpression,
     result: result?.toString() ?? '',
